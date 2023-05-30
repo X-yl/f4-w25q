@@ -1,0 +1,11 @@
+[package]
+name = "f4-w25q"
+version = "0.1.0"
+edition = "2021"
+description = "W25Q driver using stm32-f4xx-hal QSPI implementation"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+stm32f4xx-hal = { version="0.16.0", features=["stm32f412"], path="../stm32f4xx-hal" }
+embedded-hal = "0.2.7"
