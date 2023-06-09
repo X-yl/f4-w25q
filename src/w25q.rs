@@ -49,7 +49,7 @@ impl From<u32> for Address {
 
 impl<PINS> W25Q<PINS>
 where
-    PINS: QspiPins + 'static,
+    PINS: QspiPins,
 {
     pub fn new(qspi: Qspi<PINS>) -> Result<Self, QspiError> {
         let mut chip = Self { qspi };
@@ -141,7 +141,6 @@ where
                 .data(data, QspiMode::QuadChannel),
         )?;
 
-        self.wait_on_busy()?;
         Ok(())
     }
 
