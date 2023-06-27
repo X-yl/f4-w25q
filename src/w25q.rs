@@ -26,6 +26,28 @@ impl SectorAddress {
     }
 }
 
+// This struct allows functions to return prior to the chip signaling that it is done.
+// When this struct is dropped, it will wait for the operation to complete.
+// This is useful for operations that take a long time, such as erasing a sector.
+// The operation can be started and the struct can be retained until the chip is needed again.
+// Once the struct is dropped, the borrow is released and the next operation can be started.
+// ```
+// let mut w25q = W25Q::new(qspi).unwrap();
+// let pending = w25q.erase_sector(SectorAddress::from_address(0x0)).unwrap();
+// // Do other stuff
+// drop(pending);
+// w25q.read(0x0, &mut buf).unwrap();
+// ```
+pub struct PendingOperation<'a, PINS: QspiPins> { 
+    w25q: &'a mut W25Q<PINS>, 
+}
+
+impl<'a, PINS: QspiPins> Drop for PendingOperation<'a, PINS> {
+    fn drop(&mut self) {
+        self.w25q.wait_on_busy().unwrap();
+    }
+}
+
 #[derive(Debug, Copy, Clone)]
 pub struct Address(u32);
 
@@ -85,7 +107,7 @@ where
         }
     }
 
-    pub fn erase_sector(&mut self, address: SectorAddress) -> Result<(), QspiError> {
+    pub fn erase_sector(&mut self, address: SectorAddress) -> Result<PendingOperation<'_, PINS>, QspiError> {
         self.write_enable()?;
         self.qspi.indirect_write(
             QspiWriteCommand::default()
@@ -94,7 +116,7 @@ where
         )?;
 
         self.wait_on_busy()?;
-        Ok(())
+        Ok(PendingOperation { w25q: self })
     }
 
     pub fn write_enable(&mut self) -> Result<(), QspiError> {
@@ -131,7 +153,9 @@ where
         Ok(())
     }
 
-    pub fn program_page(&mut self, address: Address, data: &[u8]) -> Result<(), QspiError> {
+    // WARNING: This function does not check if the page is already erased.
+    // You must call erase_sector() before writing to a sector!!
+    pub fn program_page(&mut self, address: Address, data: &[u8]) -> Result<PendingOperation<'_, PINS>, QspiError> {
         self.write_enable()?;
 
         self.qspi.indirect_write(
@@ -141,7 +165,7 @@ where
                 .data(data, QspiMode::QuadChannel),
         )?;
 
-        Ok(())
+        Ok(PendingOperation { w25q: self })
     }
 
     pub fn read(&mut self, address: Address, data: &mut [u8]) -> Result<(), QspiError> {
