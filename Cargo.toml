@@ -11,7 +11,7 @@ default = ["littlefs2"]
 littlefs2 = ["dep:littlefs2", "dep:typenum"]
 
 [dependencies]
-stm32f4xx-hal = { version="0.16.0", features=["stm32f412"], path="../stm32f4xx-hal" }
+stm32f4xx-hal = { version="0.17.1", features=["stm32f412"], path="../stm32f4xx-hal" }
 cortex-m-semihosting = "0.5"
 embedded-hal = "0.2.7"
 littlefs2 = { version="0.4.0", optional=true, features=["c-stubs"]}
