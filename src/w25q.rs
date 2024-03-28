@@ -1,4 +1,4 @@
-use core::fmt::Debug;
+use core::{fmt::Debug, future::Future, pin::Pin, task::{Context, Poll}};
 use stm32f4xx_hal::qspi::{
     MemoryMapped, Qspi, QspiError, QspiMemoryMappedConfig, QspiMode, QspiPins, QspiReadCommand,
     QspiWriteCommand,
@@ -27,6 +27,8 @@ impl SectorAddress {
 }
 
 // This struct allows functions to return prior to the chip signaling that it is done.
+// It impls Future so can be awaited in async code. Otherwise, it can be dropped at which point,
+// it will wait for the operation to complete.
 // When this struct is dropped, it will wait for the operation to complete.
 // This is useful for operations that take a long time, such as erasing a sector.
 // The operation can be started and the struct can be retained until the chip is needed again.
@@ -40,6 +42,20 @@ impl SectorAddress {
 // ```
 pub struct PendingOperation<'a, PINS: QspiPins> { 
     w25q: &'a mut W25Q<PINS>, 
+}
+
+impl<'a, PINS: QspiPins> Future for PendingOperation<'a, PINS> {
+    type Output = ();
+
+    fn poll(self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Self::Output> {
+        if self.get_mut().w25q.is_busy() {
+            // FIXME: use waker properly (requires status polling mode to be implemented)
+            cx.waker().wake_by_ref();
+            Poll::Pending
+        } else {
+            Poll::Ready(())
+        } 
+    }
 }
 
 impl<'a, PINS: QspiPins> Drop for PendingOperation<'a, PINS> {
@@ -92,30 +108,41 @@ where
         Ok(DeviceId(buf[0]))
     }
 
-    pub fn wait_on_busy(&mut self) -> Result<(), QspiError> {
+    pub fn is_busy(&mut self) -> bool {
         let mut buf = [0u8; 1];
 
-        loop {
-            self.qspi.indirect_read(
-                QspiReadCommand::new(&mut buf, QspiMode::SingleChannel)
-                    .instruction(0x05, QspiMode::SingleChannel),
-            )?;
+        self.qspi.indirect_read(
+            QspiReadCommand::new(&mut buf, QspiMode::SingleChannel)
+                .instruction(0x05, QspiMode::SingleChannel),
+        ).unwrap();
 
-            if buf[0] & 0x01 == 0 {
-                return Ok(());
-            }
-        }
+        buf[0] & 0x01 == 0x01
+    }
+
+    pub fn wait_on_busy(&mut self) -> Result<(), QspiError> {
+        while self.is_busy() {}
+        Ok(())
+    }
+
+    pub fn chip_erase(&mut self) -> Result<PendingOperation<'_, PINS>, QspiError> {
+        self.write_enable()?;
+        self.wait_on_busy()?;
+        self.qspi.indirect_write(
+            QspiWriteCommand::default().instruction(0x60, QspiMode::SingleChannel),
+        )?;
+
+        Ok(PendingOperation { w25q: self })
     }
 
     pub fn erase_sector(&mut self, address: SectorAddress) -> Result<PendingOperation<'_, PINS>, QspiError> {
         self.write_enable()?;
+        self.wait_on_busy()?;
         self.qspi.indirect_write(
             QspiWriteCommand::default()
                 .instruction(0x20, QspiMode::SingleChannel)
                 .address(address.to_address(), QspiMode::SingleChannel),
         )?;
 
-        self.wait_on_busy()?;
         Ok(PendingOperation { w25q: self })
     }
 
