@@ -4,11 +4,11 @@ use stm32f4xx_hal::qspi::QspiPins;
 use crate::w25q::{SectorAddress, W25Q};
 
 
-pub struct W25QWrapper<const BLOCK_COUNT: usize, PINS: QspiPins> {
+pub struct W25QFs<const BLOCK_COUNT: usize, PINS: QspiPins> {
     flash: W25Q<PINS>,
 }
 
-impl<const BLOCK_COUNT: usize, PINS: QspiPins> W25QWrapper<BLOCK_COUNT, PINS> {
+impl<const BLOCK_COUNT: usize, PINS: QspiPins> W25QFs<BLOCK_COUNT, PINS> {
     pub fn new(flash: W25Q<PINS>) -> Self {
         Self {
             flash,
@@ -16,7 +16,7 @@ impl<const BLOCK_COUNT: usize, PINS: QspiPins> W25QWrapper<BLOCK_COUNT, PINS> {
     }
 }
 
-impl<const BLOCK_COUNT: usize, PINS: QspiPins> Storage for W25QWrapper<BLOCK_COUNT, PINS> {
+impl<const BLOCK_COUNT: usize, PINS: QspiPins> Storage for W25QFs<BLOCK_COUNT, PINS> {
     const BLOCK_COUNT: usize = BLOCK_COUNT;
     const READ_SIZE: usize = 256;
     const WRITE_SIZE: usize = 256;
