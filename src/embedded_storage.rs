@@ -13,6 +13,10 @@ impl<PINS: QspiPins, const CAPACITY: usize> W25QSequentialStorage<PINS, CAPACITY
     pub fn new(flash: W25Q<PINS>) -> Self {
         W25QSequentialStorage { flash }
     }
+
+    pub fn release(self) -> W25Q<PINS> {
+        self.flash
+    }
 }
 
 #[derive(Debug)]

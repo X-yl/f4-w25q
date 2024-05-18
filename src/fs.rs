@@ -14,6 +14,10 @@ impl<const BLOCK_COUNT: usize, PINS: QspiPins> W25QFs<BLOCK_COUNT, PINS> {
             flash,
         }
     }
+
+    pub fn release(self) -> W25Q<PINS> {
+        self.flash
+    }
 }
 
 impl<const BLOCK_COUNT: usize, PINS: QspiPins> Storage for W25QFs<BLOCK_COUNT, PINS> {
