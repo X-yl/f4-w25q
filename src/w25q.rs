@@ -9,7 +9,7 @@ pub struct W25Q<PINS: QspiPins> {
 }
 
 #[derive(Debug, Copy, Clone)]
-pub struct DeviceId(u8);
+pub struct DeviceId(pub u8);
 
 const SECTOR_SIZE: u32 = 4096;
 
