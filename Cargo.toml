@@ -17,7 +17,7 @@ littlefs2 = ["dep:littlefs2", "dep:typenum"]
 embedded-storage = ["dep:embedded-storage-async"]
 
 [dependencies]
-stm32f4xx-hal = { version="0.22.1", features=["quadspi"], path="../stm32f4xx-hal"}
+stm32f4xx-hal = { features=["quadspi"], path="../stm32f4xx-hal"}
 cortex-m-semihosting = "0.5"
 embedded-hal = "1.0.0"
 littlefs2 = { version="0.6.1", optional=true, features=["c-stubs"] }
